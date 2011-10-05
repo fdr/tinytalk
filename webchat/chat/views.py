@@ -1,9 +1,12 @@
+import json
 import uuid
-import simplejson
+
+from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from gevent.event import Event
+
 from webchat import settings
 
 
@@ -19,6 +22,7 @@ class ChatRoom(object):
             request.session['cursor'] = self.cache[-1]['id']
         return render_to_response('index.html', {'MEDIA_URL': settings.MEDIA_URL, 'messages': self.cache})
 
+    @csrf_exempt
     def message_new(self, request):
         name = request.META.get('REMOTE_ADDR') or 'Anonymous'
         forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -32,6 +36,7 @@ class ChatRoom(object):
         self.new_message_event.clear()
         return json_response(msg)
 
+    @csrf_exempt
     def message_updates(self, request):
         cursor = request.session.get('cursor')
         if not self.cache or cursor == self.cache[-1]['id']:
@@ -62,4 +67,4 @@ def create_message(from_, body):
 
 def json_response(value, **kwargs):
     kwargs.setdefault('content_type', 'text/javascript; charset=UTF-8')
-    return HttpResponse(simplejson.dumps(value), **kwargs)
+    return HttpResponse(json.dumps(value), **kwargs)
